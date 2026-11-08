@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bdh-app-vacation-mode"
+version = "1.0.0"
+description = "Black Diamond Hub app: Vacation / home mode switching via Home Assistant and the bdl_modes AppDaemon app"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    "bdh-sdk>=0.2,<1",
+    "requests",
+]
+
+[project.urls]
+Source = "https://github.com/blackdiamondlodge/bdh-app-vacation-mode"
+
+[project.entry-points."blackdiamondhub.plugins"]
+vacation_mode = "vacation_mode.plugin:spec"
+
+[tool.setuptools.packages.find]
+include = ["vacation_mode", "vacation_mode.*"]
+
+[tool.setuptools.package-data]
+vacation_mode = [
+    "templates/**/*",
+    "static/**/*",
+    "migrations/*.py",
+]
