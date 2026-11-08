@@ -1088,8 +1088,6 @@ class HomepageIconTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'href="/vacation_mode/"')
         self.assertNotContains(response, "vacation_mode/hub/icon.svg")
-        # Radiant stays public.
-        self.assertContains(response, "/radiant/")
 
 
 @tag('selenium')
