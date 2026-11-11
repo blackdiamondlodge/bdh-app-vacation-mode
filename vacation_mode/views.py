@@ -1,5 +1,8 @@
+from functools import wraps
+
 from bdh_sdk import is_admin
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_POST, require_GET
@@ -16,7 +19,18 @@ from .steps import build_vacation_steps, build_home_steps, SEASON_COOLING
 from . import bdl_client, config
 
 
-@login_required
+def admin_required(view):
+    """Signed-out users go to the login page; signed-in non-admins get 403."""
+    @login_required
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if not is_admin(request):
+            raise PermissionDenied
+        return view(request, *args, **kwargs)
+    return wrapper
+
+
+@admin_required
 def vacation_mode_view(request):
     """Main page view — renders the vacation mode UI."""
     if bdl_client.enabled():
@@ -59,7 +73,7 @@ def vacation_mode_view(request):
     return render(request, "vacation_mode/vacation_mode.html", context)
 
 
-@login_required
+@admin_required
 @require_POST
 def execute_view(request):
     """API endpoint to start executing vacation or home mode steps."""
@@ -82,7 +96,7 @@ def execute_view(request):
     return JsonResponse({"run_id": run_id, "mode": mode})
 
 
-@login_required
+@admin_required
 @require_GET
 def status_view(request, run_id):
     """API endpoint to poll the status of a run."""
@@ -93,7 +107,7 @@ def status_view(request, run_id):
     return JsonResponse(run_data)
 
 
-@login_required
+@admin_required
 @require_GET
 def state_view(request):
     """API endpoint to get current away mode state and any active run."""
@@ -113,7 +127,7 @@ def state_view(request):
 # --------------------------------------------------------------------------
 # bdl_modes (AppDaemon) client views — used when BDL_MODES_URL is set.
 
-@login_required
+@admin_required
 def bdl_modes_view(request):
     status, error, _ = bdl_client.call("status")
     previews = {}
@@ -131,7 +145,7 @@ def bdl_modes_view(request):
     })
 
 
-@login_required
+@admin_required
 @require_GET
 def bdl_modes_status_view(request):
     data, error, code = bdl_client.call("status")
@@ -140,7 +154,7 @@ def bdl_modes_status_view(request):
     return JsonResponse(data)
 
 
-@login_required
+@admin_required
 @require_POST
 def bdl_modes_command_view(request):
     try:
