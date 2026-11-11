@@ -477,7 +477,7 @@ class VerifyEntityStateTests(TestCase):
 
 def _make_owner(username="owner"):
     from django.contrib.auth.models import User
-    return User.objects.create_user(username, password="pw")
+    return User.objects.create_user(username, password="pw", is_staff=True)
 
 
 class ViewTests(TestCase):
@@ -1076,7 +1076,7 @@ class HomepageIconTests(TestCase):
 
     def test_homepage_shows_vacation_icon_when_logged_in(self):
         from django.contrib.auth.models import User
-        user = User.objects.create_user("owner", password="pw")
+        user = User.objects.create_user("owner", password="pw", is_staff=True)
         self.client.force_login(user)
         response = self.client.get("/")
         self.assertContains(response, 'href="/vacation_mode/"')
@@ -1613,7 +1613,7 @@ class BdlModesViewTests(TestCase):
         self.user = User.objects.create_user(username="u", password="p")
         self.client = Client()
 
-    def login(self, staff=False):
+    def login(self, staff=True):
         self.user.is_staff = staff
         self.user.save()
         self.client.force_login(self.user)
@@ -1668,13 +1668,19 @@ class BdlModesViewTests(TestCase):
                                      dry_run=None)
 
     @patch("vacation_mode.views.bdl_client.call")
-    def test_dry_run_only_for_staff(self, call):
+    def test_non_admin_is_forbidden(self, call):
         call.return_value = (BM_STATUS, None, 200)
         self.login(staff=False)
-        self.client.post("/vacation_mode/api/modes/command/", data=json.dumps(
+        self.assertEqual(self.client.get("/vacation_mode/").status_code, 403)
+        r = self.client.post("/vacation_mode/api/modes/command/", data=json.dumps(
             {"cmd": "home", "dry_run": True}), content_type="application/json")
-        self.assertIsNone(call.call_args.kwargs["dry_run"])
-        self.login(staff=True)
+        self.assertEqual(r.status_code, 403)
+        call.assert_not_called()
+
+    @patch("vacation_mode.views.bdl_client.call")
+    def test_dry_run_for_admin(self, call):
+        call.return_value = (BM_STATUS, None, 200)
+        self.login()
         self.client.post("/vacation_mode/api/modes/command/", data=json.dumps(
             {"cmd": "home", "dry_run": True}), content_type="application/json")
         self.assertTrue(call.call_args.kwargs["dry_run"])
@@ -1723,7 +1729,7 @@ class BdlModesDisabledTests(TestCase):
     @patch("vacation_mode.views.bdl_client.call")
     def test_legacy_page_without_url(self, call, *_):
         client = Client()
-        client.force_login(User.objects.create_user("u", password="p"))
+        client.force_login(User.objects.create_user("u", password="p", is_staff=True))
         r = client.get("/vacation_mode/")
         self.assertEqual(r.status_code, 200)
         self.assertTemplateUsed(r, "vacation_mode/vacation_mode.html")
