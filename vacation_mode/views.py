@@ -1,3 +1,4 @@
+from bdh_sdk import is_admin
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -126,7 +127,7 @@ def bdl_modes_view(request):
         "previews": previews,
         "error": error,
         "preheat_enabled": config.preheat_enabled(),
-        "allow_dry_run": request.user.is_staff,
+        "allow_dry_run": is_admin(request),
     })
 
 
@@ -161,7 +162,7 @@ def bdl_modes_command_view(request):
         cmd, arrival=body.get("arrival"), skip_steps=skip,
         request_id=str(body["request_id"])[:64]
         if body.get("request_id") else None,
-        dry_run=True if (body.get("dry_run") and request.user.is_staff)
+        dry_run=True if (body.get("dry_run") and is_admin(request))
         else None)
     if error:
         return JsonResponse({"error": error}, status=code)
